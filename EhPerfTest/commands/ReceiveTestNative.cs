@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -53,7 +54,7 @@ namespace EHPerfTest
         // Drain all events. 
         public async Task WorkAsync()
         {
-            Console.WriteLine("Draining events... will stop listening when there are no events for 60 seconds");
+            Console.WriteLine("Begin test ...  expecting to pull down {0} events", _expected);
             _stopwatch.Start();
             await this._eventProcessorHost.RegisterEventProcessorFactoryAsync(this, _options);
 
@@ -66,25 +67,37 @@ namespace EHPerfTest
         public IEventProcessor CreateEventProcessor(PartitionContext context)
         {
             return this;
-        }      
+        }
 
-            async Task IEventProcessor.CloseAsync(PartitionContext context, CloseReason reason)
+        async Task IEventProcessor.CloseAsync(PartitionContext context, CloseReason reason)
+        {
+            Console.WriteLine("Processor Shutting Down. Partition '{0}', Reason: '{1}'.", context.Lease.PartitionId, reason);
+            if (reason == CloseReason.Shutdown)
             {
-                Console.WriteLine("Processor Shutting Down. Partition '{0}', Reason: '{1}'.", context.Lease.PartitionId, reason);
-                if (reason == CloseReason.Shutdown)
+                await context.CheckpointAsync();
+            }
+        }
+
+        Task IEventProcessor.OpenAsync(PartitionContext context)
+        {
+            Console.WriteLine("SimpleEventProcessor initialized.  Partition: '{0}', Offset: '{1}'", context.Lease.PartitionId, context.Lease.Offset);
+            return Task.FromResult<object>(null);
+        }
+
+        public void Dump()
+        {
+            using (var tw = new StreamWriter(@"c:\temp\x1.csv"))
+            {
+                tw.WriteLine("idx, count");
+                for (int i = 0; i < _received.Length; i++)
                 {
-                    await context.CheckpointAsync();
+                    tw.WriteLine("{0}, {1}", i, _received[i]);
                 }
             }
+        }
 
-            Task IEventProcessor.OpenAsync(PartitionContext context)
-            {
-                Console.WriteLine("SimpleEventProcessor initialized.  Partition: '{0}', Offset: '{1}'", context.Lease.PartitionId, context.Lease.Offset);
-                return Task.FromResult<object>(null);
-            }
-
-            async Task IEventProcessor.ProcessEventsAsync(PartitionContext context, IEnumerable<EventData> messages)
-            {
+        async Task IEventProcessor.ProcessEventsAsync(PartitionContext context, IEnumerable<EventData> messages)
+        {
 #if false
             foreach (EventData eventData in messages)
             {
@@ -111,7 +124,7 @@ namespace EHPerfTest
                 }
             }
 
-            lock(this)
+            lock (this)
             {
                 _totalReceived += count;
 
@@ -127,14 +140,14 @@ namespace EHPerfTest
             }
 
 
-                Console.WriteLine("[{1}], Got: {0} events", count, DateTime.UtcNow);
+            Console.WriteLine("[{1}], Got: {0} events. total={2}", count, DateTime.UtcNow, _totalReceived);
 #endif
 
-                //Call checkpoint every 5 minutes, so that worker can resume processing from 5 minutes back if it restarts.
-                //if (this.checkpointStopWatch.Elapsed > TimeSpan.FromMinutes(5))
-                {
-                    await context.CheckpointAsync();
-                }
-            }        
+            //Call checkpoint every 5 minutes, so that worker can resume processing from 5 minutes back if it restarts.
+            //if (this.checkpointStopWatch.Elapsed > TimeSpan.FromMinutes(5))
+            {
+                await context.CheckpointAsync();
+            }
+        }
     }
 }

@@ -14,6 +14,8 @@ namespace EHPerfTest
             drain,
             add,
             testnative,
+            wj,
+            testwj
         }
 
         // Performance test for EventHub reading 
@@ -24,6 +26,8 @@ namespace EHPerfTest
 
             string path = args[1];
             string connectionString = args[2];
+
+            Console.WriteLine(">> Mode: {0}", m2);
 
             switch (m2)
             {
@@ -57,6 +61,37 @@ namespace EHPerfTest
                         add.WorkAsync(numEventsToAdd).Wait();
 
                         var test = new ReceiveTestNative(path, connectionString, storageConnectionString, numEventsToAdd);
+                        test.WorkAsync().Wait();
+                    }
+                    break;
+
+                case Mode.testwj:
+                    {
+                        string storageConnectionString = args[3];
+                        var drain = new DrainEvent(path, connectionString, storageConnectionString);
+                        drain.WorkAsync().Wait();
+
+                        int numEventsToAdd = 30 * 1000;
+
+                        var add = new AddEvents(path, connectionString);
+                        add.WorkAsync(numEventsToAdd).Wait();
+
+                        var test = new ReceiveTestWebJobs(path, connectionString, storageConnectionString, numEventsToAdd);
+                        test.WorkAsync().Wait();
+                    }
+                    break;
+
+
+                case Mode.wj:
+                    {
+                        string storageConnectionString = args[3];
+                        int numEventsToAdd = 30 * 1000;
+
+                        var test = new ReceiveTestWebJobs(
+                            path, 
+                            connectionString, 
+                            storageConnectionString, 
+                            numEventsToAdd);
                         test.WorkAsync().Wait();
                     }
                     break;
