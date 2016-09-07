@@ -1,0 +1,12 @@
+{
+  "bindings": [
+    {
+      "type": "eventHubTrigger",
+      "name": "items",
+      "direction": "in",
+      "path": "%ehpath%",
+      "connection": "functelem"
+    }
+  ],
+  "disabled": false
+}

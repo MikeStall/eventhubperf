@@ -43,7 +43,7 @@ namespace EHPerfTest
                     {
                         var add = new AddEvents(path, connectionString);
 
-                        int numEventsToAdd = 10 * 1000;
+                        int numEventsToAdd = 30 * 1000;
                                                 
                         add.WorkAsync(numEventsToAdd).Wait();
                     }

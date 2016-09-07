@@ -78,6 +78,8 @@ namespace EHPerfTest
                     Console.WriteLine("*** Error. duplicate event: {0}", item.Num);
                     Console.ResetColor();
                 }
+
+                
             }
 
             lock (this)
